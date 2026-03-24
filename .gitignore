@@ -1,0 +1,18 @@
+# Python (кеш компілятора)
+__pycache__/
+*.py[cod]
+
+# Jupyter Notebooks (резервні копії блокнотів)
+.ipynb_checkpoints/
+
+# Віртуальні середовища та секрети
+.venv/
+env/
+.env
+
+# Дані (ігноруємо великі файли датасетів, щоб не перевантажити GitHub)
+data/raw/
+data/processed/
+*.csv
+*.xlsx
+*.json
