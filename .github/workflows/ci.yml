@@ -1,43 +1,76 @@
-name: Python CI
+name: Modules CI
 
+# 1. ТРИГЕРИ (Коли запускати)
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      target_module:
+        description: 'Оберіть модуль для запуску (або all для всіх)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - data_load 
+          - data_quality
 
 jobs:
-  lint-code:
+  # 2. ПАРАЛЕЛЬНІ ЗАПУСКИ (Matrix)
+  test-modules:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Якщо один модуль впаде, інші продовжать роботу
+      matrix:
+        module: [module_a, module_b, module_c] # ЗАМІНИТИ НА ВАШІ МОДУЛІ
+
+    # Ця умова дозволяє запускати або всі модулі (при push/pr), або лише обраний вручну
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      inputs.target_module == 'all' ||
+      inputs.target_module == matrix.module
 
     steps:
-    - name: Отримання коду репозиторію
-      uses: actions/checkout@v4
+      - name: Отримання коду
+        uses: actions/checkout@v4
 
-    - name: Налаштування Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Налаштування Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Встановлення лінтера (flake8)
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8
+      # 3. ВСТАНОВЛЕННЯ ЗАЛЕЖНОСТЕЙ
+      - name: Встановлення залежностей
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest flake8
+          # Якщо у вас є requirements.txt, розкоментуйте рядок нижче:
+          # pip install -r requirements.txt
 
-    - name: Перевірка коду в папці src
-      run: |
-        # Перевіряємо тільки папку src на наявність критичних помилок
-        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Запуск скрипта (імітація роботи)
-      run: |
-        # Запускаємо твій код. Для прикладу просто збережемо вивід у текстовий файл.
-        # Якщо data_load.py ще порожній, ми просто запишемо тестовий рядок.
-        python src/data_load.py > execution_log.txt || echo "Виконання успішне" > execution_log.txt
+      # 4. ЗАПУСК ПЕРЕВІРОК ТА ГЕНЕРАЦІЯ АРТЕФАКТІВ
+      - name: Запуск перевірок для ${{ matrix.module }}
+        run: |
+          echo "Створюємо папку для артефактів..."
+          mkdir -p artifacts/${{ matrix.module }}
+          
+          echo "Запускаємо лінтер..."
+          # Додали .py в кінці шляху
+          flake8 src/${{ matrix.module }}.py > artifacts/${{ matrix.module }}/lint_report.txt || true
+          
+          echo "Запускаємо тести..."
+          # Імітація генерації звіту. Адаптуйте команду під ваш проєкт.
+          pytest src/${{ matrix.module }} --junitxml=artifacts/${{ matrix.module }}/test_results.xml || true
+          
+          echo "Збереження тестового графіка/логу..."
+          echo "Log for ${{ matrix.module }}" > artifacts/${{ matrix.module }}/execution.log
 
-    - name: Публікація артефактів (Звіти та Логи)
-      uses: actions/upload-artifact@v4
-      with:
-        name: my-project-reports # Назва архіву, який ти будеш завантажувати
-        path: |
-          execution_log.txt
-          reports/figures/
+      # 5. ПУБЛІКАЦІЯ АРТЕФАКТІВ
+      - name: Завантаження артефактів
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.module }}
+          path: artifacts/${{ matrix.module }}/
+          retention-days: 7 # Скільки днів зберігати архів (опціонально)
