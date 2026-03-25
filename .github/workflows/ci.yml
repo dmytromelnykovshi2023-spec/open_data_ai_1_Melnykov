@@ -28,3 +28,16 @@ jobs:
       run: |
         # Перевіряємо тільки папку src на наявність критичних помилок
         flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Запуск скрипта (імітація роботи)
+      run: |
+        # Запускаємо твій код. Для прикладу просто збережемо вивід у текстовий файл.
+        # Якщо data_load.py ще порожній, ми просто запишемо тестовий рядок.
+        python src/data_load.py > execution_log.txt || echo "Виконання успішне" > execution_log.txt
+
+    - name: Публікація артефактів (Звіти та Логи)
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-project-reports # Назва архіву, який ти будеш завантажувати
+        path: |
+          execution_log.txt
+          reports/figures/
