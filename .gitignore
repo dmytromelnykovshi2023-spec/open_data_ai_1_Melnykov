@@ -10,9 +10,14 @@ __pycache__/
 env/
 .env
 
+
 # Дані (ігноруємо великі файли датасетів, щоб не перевантажити GitHub)
 data/raw/
 data/processed/
 *.csv
 *.xlsx
 *.json
+
+.env
+db_data/
+__pycache__/

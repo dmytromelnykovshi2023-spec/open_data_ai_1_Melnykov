@@ -3,14 +3,28 @@ import os
 
 
 def load_and_clean_real_estate_data(file_path):
-    """
-    Завантажує та попередньо очищує дані про вільні площі з наданого CSV файлу.
-    Враховує специфічну структуру заголовків реєстру.
-    """
-    print(f"Починаємо завантаження даних з: {file_path}")
+    print("Розкриваємо маскування: завантажуємо як справжній Excel...")
+    try:
+        # Читаємо файл саме як Excel!
+        df = pd.read_excel(
+            file_path,
+            header=1  # Кажемо, що нормальні заголовки лежать у другому рядку
+        )
 
-    if not os.path.exists(file_path):
-        print(f"Помилка: Файл {file_path} не знайдено! Перевір шлях.")
+        # Перевіряємо, чи знайшлася наша колонка
+        if 'Район' not in df.columns:
+            print(f"❌ Колонку 'Район' не знайдено. Ось що є: {df.columns.tolist()}")
+            return None
+
+        # Викидаємо порожні рядки і чистимо текст від пробілів
+        df = df.dropna(subset=['Район'])
+        df['Район'] = df['Район'].astype(str).str.strip()
+
+        print(f"✅ Успішно завантажено {len(df)} приміщень для графіка.")
+        return df
+
+    except Exception as e:
+        print(f"❌ Критична помилка при завантаженні: {e}")
         return None
 
     try:
@@ -18,11 +32,11 @@ def load_and_clean_real_estate_data(file_path):
         # (індексація починається з нуля). 1-й рядок з датою автоматично проігнорується.
         df = pd.read_csv(
             file_path,
-            header=[1, 2],
-            skipinitialspace=True
-            # Якщо будуть ієрогліфи замість українських літер,
-            # розкоментуй (прибери #) наступний рядок:
-            # , encoding='cp1251'
+            header=1,
+            sep=';',
+            encoding='cp1251',
+            encoding_errors='replace',
+            on_bad_lines='skip'
         )
 
         # Об'єднання дворівневих заголовків в один зручний рядок
