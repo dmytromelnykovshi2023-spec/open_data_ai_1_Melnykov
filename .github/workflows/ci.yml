@@ -20,10 +20,10 @@ on:
 jobs:
   test-modules:
     runs-on: self-hosted
-    # 1. ПЕРЕВИЗНАЧАЄМО HOME:
-    # Усі фонові утиліти думатимуть, що їхня домашня папка — це папка поточного проєкту,
-    # і не будуть лізти до /Users/runner
+    # ДОДАЙТЕ ЦЕЙ БЛОК ENV:
     env:
+      RUNNER_TOOL_CACHE: /tmp/runner_tools
+      AGENT_TOOLSDIRECTORY: /tmp/runner_tools
       HOME: ${{ github.workspace }}
       
     strategy:
