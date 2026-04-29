@@ -20,13 +20,18 @@ on:
 jobs:
   test-modules:
     runs-on: self-hosted
+    # 1. ПЕРЕВИЗНАЧАЄМО HOME:
+    # Усі фонові утиліти думатимуть, що їхня домашня папка — це папка поточного проєкту,
+    # і не будуть лізти до /Users/runner
+    env:
+      HOME: ${{ github.workspace }}
+      
     strategy:
       fail-fast: false
       matrix:
         module: [data_load, data_quality]
 
     steps:
-      # 1. Розумний фільтр: перевіряємо, чи треба запускати цей модуль
       - name: Фільтр ручного запуску
         id: check
         run: |
@@ -37,7 +42,6 @@ jobs:
             echo "run_job=true" >> $GITHUB_ENV
           fi
 
-      # Всі наступні кроки виконаються ТІЛЬКИ якщо run_job == 'true'
       - name: Отримання коду
         if: env.run_job == 'true'
         uses: actions/checkout@v4
@@ -50,19 +54,22 @@ jobs:
 
       - name: Встановлення залежностей
         if: env.run_job == 'true'
+        # 2. ДОДАЄМО --no-cache-dir:
+        # Забороняємо pip звертатися до системних папок кешу, щоб уникнути проблем із правами
         run: |
-          python -m pip install --upgrade pip
-          pip install pytest flake8
+          python -m pip install --upgrade pip --no-cache-dir
+          pip install pytest flake8 --no-cache-dir
 
       - name: Запуск перевірок для ${{ matrix.module }}
         if: env.run_job == 'true'
+        # 3. ВИКОРИСТОВУЄМО АБСОЛЮТНІ ШЛЯХИ:
+        # $GITHUB_WORKSPACE гарантує, що папка створиться саме там, де лежить код
         run: |
           echo "Створюємо папку для артефактів..."
-          mkdir -p artifacts/${{ matrix.module }}
+          mkdir -p "$GITHUB_WORKSPACE/artifacts/${{ matrix.module }}"
           
           echo "Запускаємо лінтер..."
-          # Зверніть увагу, тут вже додано .py
-          flake8 src/${{ matrix.module }}.py > artifacts/${{ matrix.module }}/lint_report.txt || true
+          flake8 "src/${{ matrix.module }}.py" > "$GITHUB_WORKSPACE/artifacts/${{ matrix.module }}/lint_report.txt" || true
 
       - name: Завантаження артефактів
         if: env.run_job == 'true'
