@@ -19,9 +19,9 @@ variable "location" {
   default = "East US"
 }
 
-variable "ssh_public_key_path" {
-  default     = "~/.ssh/id_ed25519.pub"
-  description = "Path to the SSH public key"
+variable "ssh_public_key" {
+  default     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDMiI9gaB7pCFdo2KndwY1sURjNqitXdRYwgbXZWVzdM beastshop25@gmail.com"
+  description = "The content of the SSH public key"
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -159,7 +159,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   admin_ssh_key {
     username   = "ubuntu"
-    public_key = file(pathexpand(var.ssh_public_key_path))
+    public_key = var.ssh_public_key
   }
 
   os_disk {
