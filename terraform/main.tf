@@ -20,7 +20,7 @@ variable "location" {
 }
 
 variable "ssh_public_key_path" {
-  default     = "~/.ssh/id_rsa.pub"
+  default     = "~/.ssh/id_ed25519.pub"
   description = "Path to the SSH public key"
 }
 
