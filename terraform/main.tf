@@ -19,9 +19,17 @@ variable "location" {
   default = "East US"
 }
 
-variable "ssh_public_key" {
-  default     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDMiI9gaB7pCFdo2KndwY1sURjNqitXdRYwgbXZWVzdM beastshop25@gmail.com"
-  description = "The content of the SSH public key"
+# Generate SSH key pair
+resource "tls_private_key" "ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Save private key locally for SSH access
+resource "local_file" "private_key" {
+  content         = tls_private_key.ssh_key.private_key_pem
+  filename        = "${path.module}/id_rsa_azure"
+  file_permission = "0600"
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -159,7 +167,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   admin_ssh_key {
     username   = "ubuntu"
-    public_key = var.ssh_public_key
+    public_key = tls_private_key.ssh_key.public_key_openssh
   }
 
   os_disk {
@@ -179,4 +187,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
 output "public_ip_address" {
   value = azurerm_linux_virtual_machine.vm.public_ip_address
+}
+
+output "ssh_command" {
+  value = "ssh -i id_rsa_azure ubuntu@${azurerm_linux_virtual_machine.vm.public_ip_address}"
 }
