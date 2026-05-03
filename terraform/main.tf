@@ -19,6 +19,11 @@ variable "location" {
   default = "East US"
 }
 
+variable "ssh_public_key_path" {
+  default     = "~/.ssh/id_rsa.pub"
+  description = "Path to the SSH public key"
+}
+
 resource "azurerm_resource_group" "rg" {
   name     = "${var.prefix}-rg"
   location = var.location
@@ -154,7 +159,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   admin_ssh_key {
     username   = "ubuntu"
-    public_key = file("~/.ssh/id_rsa.pub")
+    public_key = file(pathexpand(var.ssh_public_key_path))
   }
 
   os_disk {
