@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:15-alpine
+    platform: linux/amd64
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - analytics_net
+
+  data_load:
+    build: 
+      context: ./data_load
+    platform: linux/amd64
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - analytics_net
+
+  data_quality_analysis:
+    build:
+      context: ./data_quality_analysis
+    platform: linux/amd64
+    env_file: .env
+    volumes:
+      - ./reports:/app/reports
+    depends_on:
+      data_load:
+        condition: service_completed_successfully
+    networks:
+      - analytics_net
+
+  data_research:
+    build:
+      context: ./data_research
+    platform: linux/amd64
+    env_file: .env
+    volumes:
+      - ./reports:/app/reports
+    depends_on:
+      data_load:
+        condition: service_completed_successfully
+    networks:
+      - analytics_net
+
+  visualization:
+    build:
+      context: ./visualization
+    platform: linux/amd64
+    env_file: .env
+    volumes:
+      - ./plots:/app/plots
+    depends_on:
+      data_load:
+        condition: service_completed_successfully
+    networks:
+      - analytics_net
+
+  web:
+    build:
+      context: ./web
+    platform: linux/amd64
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./reports:/app/reports
+      - ./plots:/app/plots
+    depends_on:
+      visualization:
+        condition: service_completed_successfully
+    networks:
+      - analytics_net
+
+networks:
+  analytics_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
