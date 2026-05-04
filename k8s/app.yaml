@@ -12,14 +12,14 @@ spec:
     metadata:
       labels:
         app: web-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
     spec:
       initContainers:
         - name: wait-for-db
           image: busybox:1.28
           command: ['sh', '-c', "until nc -z postgres 5432; do echo waiting for db; sleep 2; done"]
-        
-        # Replace these images with your actual registry images once built
-        # e.g., myregistry/data_load:latest
         - name: data-load
           image: data_load:latest
           imagePullPolicy: IfNotPresent
@@ -33,40 +33,36 @@ spec:
               mountPath: /app/reports
             - name: plots-volume
               mountPath: /app/plots
-              
         - name: data-quality
           image: data_quality_analysis:latest
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: reports-volume
               mountPath: /app/reports
-              
         - name: data-research
           image: data_research:latest
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: reports-volume
               mountPath: /app/reports
-
         - name: visualization
           image: visualization:latest
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: plots-volume
               mountPath: /app/plots
-
       containers:
         - name: web
-          image: web:latest
+          image: web:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
+            - containerPort: 8000
           volumeMounts:
             - name: reports-volume
               mountPath: /app/reports
             - name: plots-volume
               mountPath: /app/plots
-              
       volumes:
         - name: data-volume
           emptyDir: {}
@@ -74,18 +70,3 @@ spec:
           emptyDir: {}
         - name: plots-volume
           emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: web-service
-  namespace: open-data-ai
-spec:
-  type: NodePort
-  selector:
-    app: web-app
-  ports:
-    - protocol: TCP
-      port: 5001
-      targetPort: 5000
-      nodePort: 30001
